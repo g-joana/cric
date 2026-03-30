@@ -1,0 +1,2 @@
+# cric
+Internet Relay Chat
