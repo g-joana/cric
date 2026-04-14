@@ -4,7 +4,10 @@
 # include <string>
 # include <vector>
 # include <poll.h>
+# include <map>
+# include "Client.hpp"
 
+class Client;
 class Server {
 public:
 	Server(int port, const std::string &password);
@@ -18,7 +21,7 @@ private:
 	int			_fd;
 
 	std::vector<struct pollfd>	_pollfds;
-
+	std::map<int, Client *> _clients;
 	void _acceptClient();
 
 	// Private so we can't create a server without a port and password
