@@ -62,6 +62,8 @@ void Server::_acceptClient() {
 		return;
 	}
 
+	_clients[clientFd] = new Client(clientFd); // cria a lista de clientssss
+
 	// Add the client socket to the pollfd list to be polled
 	struct pollfd pfd;
 	pfd.fd = clientFd;
@@ -78,13 +80,27 @@ void Server::run() {
 		int ready = poll(&_pollfds[0], _pollfds.size(), -1);
 		if (ready == -1)
 			break;
-
+		
 		for (size_t i = 0; i < _pollfds.size(); i++) {
 			if (_pollfds[i].revents & POLLIN) {
 				if (_pollfds[i].fd == _fd)
-					_acceptClient();
+				_acceptClient();
 				else {
-					// TODO: read from client
+					char buffer[1024]; //safe size char
+					int bytesReads = recv(_pollfds[i].fd, buffer, sizeof(buffer) -1, 0);
+
+					if (bytesReads <= 0){ 
+						std::cout << "Client fd " << _pollfds[i].fd << " disconnected!" <<std::endl;
+						close(_pollfds[i].fd);
+						_pollfds.erase(_pollfds.begin() + i);
+						i--;
+					}
+					else{
+						buffer[bytesReads] = '\0';
+						std::cout << "Data recived from fd " << _pollfds[i].fd << " : " << buffer << std::endl;
+						// Client *c = _clients[_pollfds[i].fd];
+						// c->appendToBuffer(buffer);
+					}
 				}
 			}
 		}
