@@ -33,6 +33,7 @@ private:
 	void _handlePASS(Client *client, const std::string &params);
 	void _handleNICK(Client *client, const std::string &params);
 	void _handleUSER(Client *client, const std::string &params);
+	void _handlePING(Client *client, const std::string &args);
 	void _sendWelcome(Client *client);
 	bool _isNickDuplicate(const std::string &nick) const;
 	void _removeClient(int fd);

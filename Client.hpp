@@ -67,6 +67,8 @@ class Client{
         std::string extractCommand();
         std::string getBuffer() const; 
         void clearBuffer(); 
+
+        void sendMessage(const std::string &msg);
 };
 
 
