@@ -89,12 +89,19 @@ cric/
 
 ## 📚 Documentação
 
+### 📖 Decisões Técnicas por Sprint
+
 Ler em `docs/sprints_knowledge/` para entender decisões técnicas:
 
 - **[S0-BUG-ANALYSIS.md](docs/sprints_knowledge/S0-BUG-ANALYSIS.md)** - Identificação de bugs críticos (poll/erase)
 - **[S1-PARSER-DESIGN.md](docs/sprints_knowledge/S1-PARSER-DESIGN.md)** - Design do parser robusto para comandos fragmentados
 - **[S1-PARSER-REVISION.md](docs/sprints_knowledge/S1-PARSER-REVISION.md)** - Testes 8/8 unitários, edge cases tratados
+- **[S2-AUTHENTICATION.md](docs/sprints_knowledge/S2-AUTHENTICATION.md)** - Sistema de autenticação, state machine, RFC compliance
 - **[architectural-design.md](docs/architectural-design.md)** - Explicação do padrão Reactor (como o servidor funciona)
+
+### 🧪 Testes Manuais com irssi
+
+- **[MANUAL_TESTING_WITH_IRSSI.md](docs/MANUAL_TESTING_WITH_IRSSI.md)** - Guia prático com 8 testes interativos, checklist de validação e troubleshooting para validar S0/S1/S2 features
 
 ---
 
@@ -129,11 +136,13 @@ make distclean
 
 Metodologia: **6 Sprints Independentes** com entrega iterativa
 
+**ℹ️ Teste Manuais**: Todos os S0/S1/S2 features podem ser testados com irssi usando [MANUAL_TESTING_WITH_IRSSI.md](docs/MANUAL_TESTING_WITH_IRSSI.md)
+
 | Sprint | Objetivo | Status | Documento |
 |--------|----------|--------|-----------|
 | **S0** | Investigar bug Ctrl+D | ✅ Completo | [S0-BUG-ANALYSIS.md](docs/sprints_knowledge/S0-BUG-ANALYSIS.md) |
 | **S1** | Parser + Bugs S0 | ✅ Completo | [S1-PARSER-DESIGN.md](docs/sprints_knowledge/S1-PARSER-DESIGN.md) |
-| **S2** | Autenticação (PASS/NICK/USER) | ⏳ Planejado | - |
+| **S2** | Autenticação (PASS/NICK/USER) | ✅ Completo | [S2-AUTHENTICATION.md](docs/sprints_knowledge/S2-AUTHENTICATION.md) |
 | **S3** | PRIVMSG user→user | ⏳ Planejado | - |
 | **S4** | Canais (JOIN/PART/QUIT) | ⏳ Planejado | - |
 | **S5** | Operadores (KICK/INVITE/TOPIC/MODE) | ⏳ Planejado | - |
@@ -148,12 +157,11 @@ Itens críticos já completos:
 - ✅ **S1**: CommandParser com agregação de pacotes
 - ✅ **S1**: Testes unitários 8/8 passando
 
-Próximos itens (S2-S6):
-- ⏳ Handlers PASS, NICK, USER (S2)
-- ⏳ Estados de cliente (INIT → AUTH → REGISTERED) (S2)
+Próximos itens (S3-S6):
 - ⏳ Roteamento PRIVMSG por nickname (S3)
 - ⏳ Classe Channel com broadcast (S4)
 - ⏳ Sistema de permissões e KICK/INVITE/TOPIC/MODE (S5)
+- ⏳ Validação final e robustez (S6)
 
 ---
 
