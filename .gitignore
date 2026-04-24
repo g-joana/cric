@@ -40,3 +40,11 @@ ircserv
 
 # debug information files
 *.dwo
+
+# llm tools
+.github
+/docs
+rubric.md 
+gemini_answer.md
+bircd
+requisitos.md
