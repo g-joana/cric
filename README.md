@@ -30,13 +30,14 @@ Comandos:
     - [x] Ajustar Loop do Poll: Garantir que, ao remover um elemento do vector<pollfd>, o índice i seja decrementado corretamente para não pular o próximo FD na lista.
 
 2. Refinamento da Classe Client
-    - [ ] Corrigir setNickname: Mudar a assinatura para void ou garantir que ela realmente altere o atributo _nickname (atualmente o código está com /*todo*/).
-    - [ ] Implementar isRegistered: Mudar de std::string para bool (ou manter string, mas garantir a lógica de alteração para "true" após o handshake inicial).
-    - [ ] Atributos de Usuário: Adicionar campos para username, realname e hostname.
+    - [x] Corrigir setNickname: Mudar a assinatura para void ou garantir que ela realmente altere o atributo _nickname (atualmente o código está com /*todo*/).
+    - [x] Implementar isRegistered: Mudar de std::string para bool (ou manter string, mas garantir a lógica de alteração para "true" após o handshake inicial).
+    - [x] Atributos de Usuário: Adicionar campos para username, realname e hostname.
 
 3. Parsing e Gerenciamento de Buffer
-    - [ ] Acúmulo de Dados: Ativar c->appendToBuffer(buffer) dentro do loop do servidor.
-    - [ ] Busca por Delimitadores: Criar função para procurar \n ou \r\n dentro da _buffer do cliente.
+    - [x] Acúmulo de Dados: Ativar c->appendToBuffer(buffer) dentro do loop do servidor.
+    - [x] Busca por Delimitadores: Criar função para procurar \n ou \r\n dentro da _buffer do cliente.
+    - [ ] BUG: cenario com mais de um cliente. se um deles digita ctrl + d, server bloqueia os outros clients. 
     - [ ] Extração de Comando: Criar lógica para:
         - Extrair a string até o primeiro \n.
         - Tratar essa string como um comando completo.
