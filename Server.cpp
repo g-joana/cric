@@ -119,6 +119,17 @@ bool Server::_isNickDuplicate(const std::string &nick) const {
 	return false;
 }
 
+Client *Server::_findClientByNick(const std::string &nick) const {
+	if (nick.empty())
+		return NULL;
+	for (std::map<int, Client*>::const_iterator it = _clients.begin();
+	     it != _clients.end(); ++it) {
+		if (it->second->getNickname() == nick)
+			return it->second;
+	}
+	return NULL;
+}
+
 void Server::_handlePASS(Client *client, const std::string &params) {
 	// params = "PASS password" - need to extract password after "PASS "
 	std::string::size_type pos = params.find(' ');
@@ -268,7 +279,6 @@ void Server::_processCommand(Client *client, const std::string &command) {
 	if (command.empty())
 		return;
 
-	// Extract command name (first word)
 	std::string::size_type spacePos = command.find(' ');
 	std::string commandName;
 	std::string params;
@@ -296,6 +306,8 @@ void Server::_processCommand(Client *client, const std::string &command) {
 		_handleUSER(client, params);
 	} else if (commandName == "PING") {
 		_handlePING(client, params);
+	} else if (commandName == "PRIVMSG") {
+		_handlePRIVMSG(client, params);
 	} else {
 		// Unknown command - for now, silently ignore (will implement more commands in S3+)
 		std::cout << "Client fd " << client->getFd() << " sent unknown command: " << commandName << std::endl;
@@ -372,5 +384,71 @@ void Server::run() {
 }
 
 void Server::_handlePING(Client *client, const std::string &args) {
-	client->sendMessage("PONG " + args);
+	std::string::size_type pos = args.find(' ');
+	if (pos == std::string::npos) {
+		client->sendMessage("PONG");
+		return;
+	}
+	pos++;
+	while (pos < args.size() && args[pos] == ' ')
+		pos++;
+
+	std::string token = args.substr(pos);
+	client->sendMessage("PONG " + token);
+}
+
+void Server::_handlePRIVMSG(Client *client, const std::string &args) {
+	if (!client->getIsRegistered()) {
+		client->sendMessage(":server 451 * :You have not registered");
+		return;
+	}
+	std::string::size_type pos = args.find(' ');
+	if (pos == std::string::npos) {
+		client->sendMessage(":server 411 " + client->getNickname() + " :No recipient given (PRIVMSG)");
+		return;
+	}
+	pos++;
+	while (pos < args.size() && args[pos] == ' ')
+		pos++;
+
+	if (pos >= args.size()) {
+		client->sendMessage(":server 411 " + client->getNickname() + " :No recipient given (PRIVMSG)");
+		return;
+	}
+	std::string::size_type targetEnd = args.find(' ', pos);
+	if (targetEnd == std::string::npos) {
+		client->sendMessage(":server 412 " + client->getNickname() + " :No text to send");
+		return;
+	}
+	std::string target = args.substr(pos, targetEnd - pos);
+	std::string::size_type textStart = targetEnd;
+	while (textStart < args.size() && args[textStart] == ' ')
+		textStart++;
+	if (textStart >= args.size()) {
+		client->sendMessage(":server 412 " + client->getNickname() + " :No text to send");
+		return;
+	}
+	std::string text;
+	if (args[textStart] == ':')
+		text = args.substr(textStart + 1);
+	else
+		text = args.substr(textStart);
+
+	if (text.empty()) {
+		client->sendMessage(":server 412 " + client->getNickname() + " :No text to send");
+		return;
+	}
+	Client *dest = _findClientByNick(target);
+	if (!dest) {
+		client->sendMessage(":server 401 " + client->getNickname() + " " + target + " :No such nick/channel");
+		return;
+	}
+	std::string forwarded = ":" + client->getNickname()
+	                      + "!" + client->getUser()
+	                      + "@server PRIVMSG " + target
+	                      + " :" + text;
+	dest->sendMessage(forwarded);
+
+	std::cout << "PRIVMSG " << client->getNickname() << " -> " << target
+	          << " : " << text << std::endl;
 }
