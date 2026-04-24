@@ -12,7 +12,7 @@ Server::Server(int port, const std::string &password)
 	if (_fd == -1)
 		throw std::runtime_error("Failed to create socket");
 
-	int opt = 1;
+	int opt = 1;	
 	setsockopt(_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
 	struct sockaddr_in addr;
@@ -90,10 +90,22 @@ void Server::run() {
 					int bytesReads = recv(_pollfds[i].fd, buffer, sizeof(buffer) -1, 0);
 
 					if (bytesReads <= 0){ 
+						int fdToRemove = _pollfds[i].fd;
 						std::cout << "Client fd " << _pollfds[i].fd << " disconnected!" <<std::endl;
-						close(_pollfds[i].fd);
+						std::map<int, Client*>::iterator it = _clients.find(fdToRemove);
+						if (it != _clients.end()){
+							delete it->second;
+							_clients.erase(it);
+						}
+						
+						std::cout << "removing fd " << fdToRemove << std::endl;
+						close(fdToRemove);
+						std::cout << "remove" << std::endl;
+
 						_pollfds.erase(_pollfds.begin() + i);
 						i--;
+
+						continue; //forcar looping voltar para o topo novamente, ajuste para que depois de retirar um fd a proxima interacao respeite o novo estado do vetor
 					}
 					else{
 						buffer[bytesReads] = '\0';

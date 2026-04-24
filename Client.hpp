@@ -7,11 +7,11 @@
 
 class Client{
     private: 
-        int _fd;
+        int         _fd;
         std::string _nickname;
         std::string _user;
         std::string _buffer;
-        std::string isRegistered;
+        bool _isRegistered;
 
         Client(); // nao criar client sem fd;
 
@@ -20,8 +20,14 @@ class Client{
         ~Client();
 
         int getFd() const;
+        
         std::string getNickname() const;
         std::string setNickname(const std::string &nick) const; 
+
+        std::string getUser()const;
+        std::string setUser(const std::string &user) const;
+
+        bool getIsRegistered()
 
         void appendToBuffer(const std::string &message); //montar mensagem parcelada no buffer
         std::string getBuffer() const; 
