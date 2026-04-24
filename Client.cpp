@@ -1,6 +1,6 @@
 #include "Client.hpp"
 
-Client::Client(int fd) : _fd(fd), _nickname(""), _user(""), _buffer(""), _isRegistered(false) {
+Client::Client(int fd) : _fd(fd), _nickname(""), _user(""), _parser(), _isRegistered(false) {
 }
 
 Client::~Client() {
@@ -34,15 +34,23 @@ void Client::setIsRegistered(bool state) {
     _isRegistered = state;
 }
 
-std::string Client::getBuffer() const {
-    return _buffer;
+// Parser delegation methods
+void Client::appendToBuffer(const std::string &data) {
+    _parser.appendData(data);
 }
 
-void Client::appendToBuffer(const std::string &message) {
-    _buffer += message;
+bool Client::hasCompleteCommand() const {
+    return _parser.hasCompleteCommand();
+}
+
+std::string Client::extractCommand() {
+    return _parser.extractCommand();
+}
+
+std::string Client::getBuffer() const {
+    return _parser.getBuffer();
 }
 
 void Client::clearBuffer() {
-    std::cout << "clear buffer" << std::endl;
-    _buffer.clear();
+    _parser.clearBuffer();
 }

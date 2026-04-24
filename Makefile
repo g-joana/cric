@@ -1,6 +1,6 @@
 NAME	= ircserv
 
-SRC		= main.cpp Server.cpp Client.cpp
+SRC		= main.cpp Server.cpp Client.cpp CommandParser.cpp
 OBJ		= $(SRC:.cpp=.o)
 
 CXX		= c++
@@ -20,6 +20,9 @@ clean:
 fclean: clean
 	rm -f $(NAME)
 
+distclean: fclean
+	rm -f *.dwo *.pdb test/*.log
+
 re: fclean all
 
-.PHONY: all clean fclean re
+.PHONY: all clean fclean distclean re

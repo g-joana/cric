@@ -62,16 +62,23 @@ void Server::_acceptClient() {
 		return;
 	}
 
-	_clients[clientFd] = new Client(clientFd); // cria a lista de clientssss
-
-	// Add the client socket to the pollfd list to be polled
-	struct pollfd pfd;
-	pfd.fd = clientFd;
-	pfd.events = POLLIN;
-	pfd.revents = 0;
-	_pollfds.push_back(pfd);
+	_clients[clientFd] = new Client(clientFd);
+	_pendingConnections.push_back(clientFd);
 
 	std::cout << "New client connected: fd " << clientFd << std::endl;
+}
+
+void Server::_processPendingConnections() {
+	// Add all pending connections to the poll list
+	for (size_t i = 0; i < _pendingConnections.size(); i++) {
+		int clientFd = _pendingConnections[i];
+		struct pollfd pfd;
+		pfd.fd = clientFd;
+		pfd.events = POLLIN;
+		pfd.revents = 0;
+		_pollfds.push_back(pfd);
+	}
+	_pendingConnections.clear();
 }
 
 void Server::run() {
@@ -82,59 +89,64 @@ void Server::run() {
 		if (ready == -1)
 			break;
 		
-		for (size_t i = 0; i < _pollfds.size(); i++) {
+		// Use index-based loop with special handling for erasure
+		for (size_t i = 0; i < _pollfds.size(); ) {
 			if (_pollfds[i].revents & POLLIN) {
-				if (_pollfds[i].fd == _fd)
-				_acceptClient();
+				if (_pollfds[i].fd == _fd) {
+					// Server socket - accept new connection
+					_acceptClient();
+					i++;
+				}
 				else {
-					char buffer[1024]; //safe size char
-					int bytesReads = recv(_pollfds[i].fd, buffer, sizeof(buffer) -1, 0);
+					// Client socket - read data
+					char buffer[1024];
+					int bytesRead = recv(_pollfds[i].fd, buffer, sizeof(buffer) - 1, 0);
 
-					if (bytesReads <= 0){ 
+					if (bytesRead <= 0) {
+						// Client disconnected
 						int fdToRemove = _pollfds[i].fd;
-						std::cout << "Client fd " << _pollfds[i].fd << " disconnected!" <<std::endl;
+						std::cout << "Client fd " << fdToRemove << " disconnected!" << std::endl;
+						
+						// Clean up client data
 						std::map<int, Client*>::iterator it = _clients.find(fdToRemove);
-						if (it != _clients.end()){
+						if (it != _clients.end()) {
 							delete it->second;
 							_clients.erase(it);
 						}
 						
-						std::cout << "removing fd " << fdToRemove << std::endl;
 						close(fdToRemove);
-						std::cout << "remove" << std::endl;
-
-						_pollfds.erase(_pollfds.begin() + i);
-						i--;
-
-						continue; //forcar looping voltar para o topo novamente, ajuste para que depois de retirar um fd a proxima interacao respeite o novo estado do vetor
-					}
-					else{
-						buffer[bytesReads] = '\0';
-						std::cout << "Data recived from fd " << _pollfds[i].fd << " : " << buffer << std::endl;
-						Client *c = _clients[_pollfds[i].fd];
-						c->appendToBuffer(buffer);
-
-						std::string clientBuffer = c->getBuffer();
 						
-						size_t pos;
-						//percorrer std ate encontrar um delimitador 
-						while((pos = clientBuffer.find("\n")) != std::string::npos){
-							std::string command = clientBuffer.substr(0, pos);
-							if (!command.empty() && command[command.size() - 1] == '\r')
-								command.erase(command.size() - 1);
-							if (!command.empty())
-							{
-								std::cout << "Executando comando: [" << command << "]" << std::endl; 
-								//todo: implementar comandos pass, nick, ..
-							}
-							clientBuffer.erase(0, pos + 1);
-							c->clearBuffer();
-							c->appendToBuffer(clientBuffer);
-						}
+						// Remove from poll list using erase, which returns iterator to next element
+						_pollfds.erase(_pollfds.begin() + i);
+						// Don't increment i - erase already points to the next element
+					}
+					else {
+						// Process received data
+						buffer[bytesRead] = '\0';
+						std::cout << "Data received from fd " << _pollfds[i].fd << " : " << buffer << std::endl;
+						
+						Client *client = _clients[_pollfds[i].fd];
+						client->appendToBuffer(buffer);
 
+						// Extract and process all complete commands
+						while (client->hasCompleteCommand()) {
+							std::string command = client->extractCommand();
+							if (!command.empty()) {
+								std::cout << "Executando comando: [" << command << "]" << std::endl;
+								// TODO: implement PASS, NICK, USER, etc commands
+							}
+						}
+						i++;
 					}
 				}
 			}
+			else {
+				i++;
+			}
 		}
+		
+		// Process any pending connections (adds them to poll list safely)
+		_processPendingConnections();
 	}
 }
+

@@ -5,13 +5,14 @@
 # include <vector>
 # include <poll.h>
 # include <iostream>
+# include "CommandParser.hpp"
 
 class Client{
     private: 
         int         _fd;
         std::string _nickname;
         std::string _user;
-        std::string _buffer;
+        CommandParser _parser;
         bool _isRegistered;
 
         Client(); // nao criar client sem fd;
@@ -31,7 +32,10 @@ class Client{
         bool getIsRegistered() const;
         void setIsRegistered(bool state);
 
-        void appendToBuffer(const std::string &message); //montar mensagem parcelada no buffer
+        // Parser integration
+        void appendToBuffer(const std::string &data);
+        bool hasCompleteCommand() const;
+        std::string extractCommand();
         std::string getBuffer() const; 
         void clearBuffer(); 
 };

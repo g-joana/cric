@@ -1,92 +1,216 @@
-# cric
-Internet Relay Chat
+# cric - ft_irc
 
-Comandos:
+**Servidor IRC (Internet Relay Chat)** implementado em **C++98** com arquitetura não-bloqueante usando `poll()`.
 
- Autenticação/Registro
-  - `PASS` enviar senha do servidor
-  - `NICK` definir nickname
-  - `USER` definir username
+---
 
-  Mensagens
-  - `PRIVMSG` mensagens privadas e para canais
+## 🎯 Objetivo
 
-  Canais
-  - `JOIN` entrar em um canal
-  - `PART` sair de um canal
-  - `QUIT` desconectar do servidor
+Implementar um servidor IRC totalmente funcional em C++ que suporte:
+- ✅ Autenticação com senha (`PASS`, `NICK`, `USER`)
+- ✅ Mensagens privadas (`PRIVMSG` user→user)
+- ✅ Canais (JOIN, PART, QUIT) com broadcast
+- ✅ Comandos de moderação (KICK, INVITE, TOPIC, MODE)
+- ✅ Compatibilidade com clientes IRC reais (irssi, WeeChat)
 
-  Comandos de operador de canal
-  - `KICK` expulsar usuário do canal
-  - `INVITE` convidar usuário para canal
-  - `TOPIC` ver/mudar tópico do canal
-  - `MODE` mudar modo do canal (i, t, k, o, l)
+---
 
- 
-### Backlog de Tarefas Faltantes
-1. Gestão de Memória e Recursos (Cleanup)
-    - [x] Remover do Map: No Server::run(), ao detectar desconexão (bytesReads <= 0), remover a entrada correspondente no std::map<int, Client*> _clients.
-    - [x] Deletar Objeto: Chamar delete para o ponteiro do objeto Client para liberar a memória alocada no accept.
-    - [x] Ajustar Loop do Poll: Garantir que, ao remover um elemento do vector<pollfd>, o índice i seja decrementado corretamente para não pular o próximo FD na lista.
+## 📋 Início Rápido
 
-2. Refinamento da Classe Client
-    - [x] Corrigir setNickname: Mudar a assinatura para void ou garantir que ela realmente altere o atributo _nickname (atualmente o código está com /*todo*/).
-    - [x] Implementar isRegistered: Mudar de std::string para bool (ou manter string, mas garantir a lógica de alteração para "true" após o handshake inicial).
-    - [x] Atributos de Usuário: Adicionar campos para username, realname e hostname.
+### Compilação
 
-3. Parsing e Gerenciamento de Buffer
-    - [x] Acúmulo de Dados: Ativar c->appendToBuffer(buffer) dentro do loop do servidor.
-    - [x] Busca por Delimitadores: Criar função para procurar \n ou \r\n dentro da _buffer do cliente.
-    - [ ] BUG: cenario com mais de um cliente. se um deles digita ctrl + d, server bloqueia os outros clients. 
-    - [ ] Extração de Comando: Criar lógica para:
-        - Extrair a string até o primeiro \n.
-        - Tratar essa string como um comando completo.
-        - Manter o que sobrar na _buffer do cliente (dados do próximo comando).
-    - [ ] Split de Parâmetros: Criar função para separar a linha em COMMAND, PARAMS e TRAILING (a parte que começa com :).
+```bash
+make        # Compila o servidor (gera ircserv)
+make clean  # Remove arquivos .o
+make fclean # Remove binário
+make distclean # Remove tudo (debug, logs)
+```
 
-4. Comandos de Registro (Autenticação Inicial)
-    - [ ] Comando PASS:
-        - Verificar se a senha enviada bate com a senha do servidor.
-        - Impedir qualquer outro comando se a senha estiver errada ou não tiver sido enviada.
-    - [ ] Comando NICK:
-        - Validar caracteres permitidos.
-        - Verificar se o nickname já está em uso por outro cliente no mapa.
-    - [ ] Comando USER:
-        - Capturar username e realname.
-    - [ ] Envio de RPL_WELCOME (001):
-        - Criar função sendResponse para enviar mensagens formatadas ao cliente.
-        - Enviar a mensagem numérica 001 após PASS, NICK e USER serem validados.
+### Execução
 
-5. Lógica de Mensageria (PRIVMSG)
-    - [ ] Busca de Destinatário: Implementar busca no mapa de clientes pelo nickname (e não apenas pelo FD).
-    - [ ] Mensagem Privada (Usuário para Usuário): Encaminhar o texto para o FD do destino.
-    - [ ] Tratar Erros: Enviar ERR_NOSUCHNICK se o destinatário não existir.
+```bash
+./ircserv <port> <password>
 
-6. Gestão de Canais (Canais e Operadores)
-    - [ ] Classe Channel: Criar classe para armazenar:
-        - Nome do canal.
-        - Lista de FDs dos membros.
-        - Lista de FDs dos operadores.
-        - Senha do canal (se houver).
+# Exemplo:
+./ircserv 6667 secretpassword
+```
 
-    - [ ] Comando JOIN:
-        - Adicionar cliente à lista do canal.
-        - Enviar a mensagem para todos os membros avisando da entrada.
+### Conexão (com nc ou irssi)
 
-    - [ ] Comando PART: Remover cliente do canal.
-    - [ ] Comando TOPIC: Ver ou alterar o tópico do canal.
+```bash
+# Via netcat
+nc localhost 6667
 
-7. Comandos de Moderação (Obrigatórios)
-    - [ ] Comando KICK: Expulsar usuário (apenas se quem enviou for operador).
-    - [ ] Comando INVITE: Convidar para canal modo +i.
-    - [ ] Comando MODE: Implementar flags:
+# Via irssi
+irssi
+/connect localhost 6667
+/quote PASS secretpassword
+/nick your_nick
+/quote USER your_user 0 * :Your Name
+```
 
-        - i: Canal apenas para convidados.
-        - t: Tópico restrito a operadores.
-        - k: Definir/remover senha do canal.
-        - o: Dar/retirar privilégio de operador.
-        - l: Definir limite de usuários.
+---
 
-8. Finalização e Robustez
-    - [ ] Sinais do Sistema: Tratar SIGINT (Ctrl+C no servidor) para fechar todos os sockets e limpar a memória antes de sair.
-    - [ ] Leaks de Memória: Rodar com valgrind para garantir que nenhuma desconexão deixe rastros na RAM.
+## 📁 Estrutura do Projeto
+
+```
+cric/
+├── docs/                      ← Documentação
+│   ├── architectural-design.md      (Padrão Reactor, design C++)
+│   └── sprints_knowledge/           (Conhecimento acumulado por sprint)
+│       ├── S0-BUG-ANALYSIS.md       (Análise do bug Ctrl+D)
+│       ├── S1-PARSER-DESIGN.md      (Design do parser)
+│       ├── S1-PARSER-REVISION.md    (Validação de testes)
+│       └── ... (S2+)
+│
+├── test/                      ← Scripts de teste
+│   ├── S0-acceptance.sh
+│   ├── S0-aggressive-test.sh
+│   ├── S0-reproduce-bug.sh
+│   ├── S1-acceptance.sh
+│   ├── S1-bug-fix-validation.sh
+│   ├── S1-parser-integration-test.sh
+│   ├── S1-parser-validation.sh
+│   └── run-parser-unit-tests.sh
+│
+├── *.cpp / *.hpp              ← Código-fonte (C++98)
+│   ├── main.cpp
+│   ├── Server.cpp / Server.hpp
+│   ├── Client.cpp / Client.hpp
+│   └── CommandParser.cpp / CommandParser.hpp
+│
+├── Makefile                   ← Build system
+├── .gitignore
+├── kalu-roadmap.md            ← Roadmap inicial
+└── README.md (você está aqui)
+```
+
+---
+
+## 📚 Documentação
+
+Ler em `docs/sprints_knowledge/` para entender decisões técnicas:
+
+- **[S0-BUG-ANALYSIS.md](docs/sprints_knowledge/S0-BUG-ANALYSIS.md)** - Identificação de bugs críticos (poll/erase)
+- **[S1-PARSER-DESIGN.md](docs/sprints_knowledge/S1-PARSER-DESIGN.md)** - Design do parser robusto para comandos fragmentados
+- **[S1-PARSER-REVISION.md](docs/sprints_knowledge/S1-PARSER-REVISION.md)** - Testes 8/8 unitários, edge cases tratados
+- **[architectural-design.md](docs/architectural-design.md)** - Explicação do padrão Reactor (como o servidor funciona)
+
+---
+
+## 🧪 Testes
+
+O projeto usa **testes executáveis por sprint**:
+
+```bash
+# S1 - Parser (agregar pacotes fragmentados)
+bash test/S1-acceptance.sh      # Status: ✓ Passou
+
+# Unitários do parser
+bash test/run-parser-unit-tests.sh
+
+# Validação de bug fixado
+bash test/S1-bug-fix-validation.sh
+
+# Limpeza pós-teste
+make distclean
+```
+
+**Tipos de testes inclusos**:
+- ✅ **Aceitação**: Funcionalidade obrigatória
+- ✅ **Unitários**: Isolamento de componentes (CommandParser)
+- ✅ **Integração**: Fluxo de cliente+servidor
+- ✅ **Regressão**: Validar que versão anterior não quebrou
+- ✅ **Memória**: `valgrind` para detectar leaks
+
+---
+
+## 🚀 Status dos Sprints
+
+Metodologia: **6 Sprints Independentes** com entrega iterativa
+
+| Sprint | Objetivo | Status | Documento |
+|--------|----------|--------|-----------|
+| **S0** | Investigar bug Ctrl+D | ✅ Completo | [S0-BUG-ANALYSIS.md](docs/sprints_knowledge/S0-BUG-ANALYSIS.md) |
+| **S1** | Parser + Bugs S0 | ✅ Completo | [S1-PARSER-DESIGN.md](docs/sprints_knowledge/S1-PARSER-DESIGN.md) |
+| **S2** | Autenticação (PASS/NICK/USER) | ⏳ Planejado | - |
+| **S3** | PRIVMSG user→user | ⏳ Planejado | - |
+| **S4** | Canais (JOIN/PART/QUIT) | ⏳ Planejado | - |
+| **S5** | Operadores (KICK/INVITE/TOPIC/MODE) | ⏳ Planejado | - |
+| **S6** | Robustez (SIGINT/valgrind final) | ⏳ Planejado | - |
+
+---
+
+## 📋 Tarefas Em Progresso
+
+Itens críticos já completos:
+- ✅ **S0**: Bug Ctrl+D identificado (2 bugs em poll/erase)
+- ✅ **S1**: CommandParser com agregação de pacotes
+- ✅ **S1**: Testes unitários 8/8 passando
+
+Próximos itens (S2-S6):
+- ⏳ Handlers PASS, NICK, USER (S2)
+- ⏳ Estados de cliente (INIT → AUTH → REGISTERED) (S2)
+- ⏳ Roteamento PRIVMSG por nickname (S3)
+- ⏳ Classe Channel com broadcast (S4)
+- ⏳ Sistema de permissões e KICK/INVITE/TOPIC/MODE (S5)
+
+---
+
+## ⚙️ Compilação & Flags
+
+```makefile
+CXX       = c++
+CXXFLAGS  = -Wall -Wextra -Werror -std=c++98
+
+make        # Compila com flags obrigatórias
+```
+
+**Requisitos**:
+- ✅ C++98 (sem C++11+)
+- ✅ `-Wall -Wextra -Werror` (sem warnings)
+- ✅ Sem bibliotecas externas (sem Boost, sem Libft)
+
+---
+
+## 🔧 Arquitetura
+
+**Padrão**: Reactor Pattern (não-bloqueante)
+
+```
+┌─────────────────┐
+│   main()        │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────────────────┐
+│  Server::run()              │
+│  ┌─────────────────────┐    │
+│  │ poll() [1 única]    │◄───┼─ Multiplexação: fd's monitorados
+│  │ - Sockets           │    │
+│  │ - Clientes          │    │
+│  │ - Canais (após S4)  │    │
+│  └─────────────────────┘    │
+│         │                   │
+│         ├─► Accept novo     │
+│         ├─► Read client     │
+│         ├─► Parse comando   │
+│         └─► Dispatch cmd    │
+└─────────────────────────────┘
+```
+
+Veja [architectural-design.md](docs/architectural-design.md) para detalhes.
+
+---
+
+## 📖 Referência
+
+- **RFC 1459**: [Internet Relay Chat Protocol](https://tools.ietf.org/html/rfc1459)
+- **irssi**: Cliente IRC para testes
+- **netcat**: Ferramenta para testes básicos
+
+---
+
+## 📝 Licença
+
+Projeto de aprendizado. Sem restrições.
