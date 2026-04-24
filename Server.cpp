@@ -77,6 +77,7 @@ void Server::_acceptClient() {
 void Server::run() {
 	while (true) {
 		// Poll the sockets for events
+		std::cout << "Aguardando no poll.. Clientes ativos: " << _pollfds.size() << std::endl;
 		int ready = poll(&_pollfds[0], _pollfds.size(), -1);
 		if (ready == -1)
 			break;
@@ -116,7 +117,7 @@ void Server::run() {
 						std::string clientBuffer = c->getBuffer();
 						
 						size_t pos;
-						
+						//percorrer std ate encontrar um delimitador 
 						while((pos = clientBuffer.find("\n")) != std::string::npos){
 							std::string command = clientBuffer.substr(0, pos);
 							if (!command.empty() && command[command.size() - 1] == '\r')
