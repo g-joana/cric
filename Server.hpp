@@ -29,6 +29,15 @@ private:
 	void _acceptClient();
 	void _processPendingConnections();
 
+	// Command handlers
+	void _handlePASS(Client *client, const std::string &params);
+	void _handleNICK(Client *client, const std::string &params);
+	void _handleUSER(Client *client, const std::string &params);
+	void _sendWelcome(Client *client);
+	bool _isNickDuplicate(const std::string &nick) const;
+	void _removeClient(int fd);
+	void _processCommand(Client *client, const std::string &command);
+
 	// Private so we can't create a server without a port and password
 	Server();
 	Server(const Server &other);
