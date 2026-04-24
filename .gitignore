@@ -48,3 +48,6 @@ requisitos.md
 
 # bircd reference (do not version, use for reference only)
 bircd
+
+# .github folder (for agents only, do not version)
+.github
