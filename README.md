@@ -142,7 +142,7 @@ Metodologia: **6 Sprints Independentes** com entrega iterativa
 |--------|----------|--------|-----------|
 | **S0** | Investigar bug Ctrl+D | ✅ Completo | [S0-BUG-ANALYSIS.md](docs/sprints_knowledge/S0-BUG-ANALYSIS.md) |
 | **S1** | Parser + Bugs S0 | ✅ Completo | [S1-PARSER-DESIGN.md](docs/sprints_knowledge/S1-PARSER-DESIGN.md) |
-| **S2** | Autenticação (PASS/NICK/USER) | ⏳ Planejado | - |
+| **S2** | Autenticação (PASS/NICK/USER) | ✅ Completo | [S2-AUTHENTICATION.md](docs/sprints_knowledge/S2-AUTHENTICATION.md) |
 | **S3** | PRIVMSG user→user | ⏳ Planejado | - |
 | **S4** | Canais (JOIN/PART/QUIT) | ⏳ Planejado | - |
 | **S5** | Operadores (KICK/INVITE/TOPIC/MODE) | ⏳ Planejado | - |
@@ -157,12 +157,11 @@ Itens críticos já completos:
 - ✅ **S1**: CommandParser com agregação de pacotes
 - ✅ **S1**: Testes unitários 8/8 passando
 
-Próximos itens (S2-S6):
-- ⏳ Handlers PASS, NICK, USER (S2)
-- ⏳ Estados de cliente (INIT → AUTH → REGISTERED) (S2)
+Próximos itens (S3-S6):
 - ⏳ Roteamento PRIVMSG por nickname (S3)
 - ⏳ Classe Channel com broadcast (S4)
 - ⏳ Sistema de permissões e KICK/INVITE/TOPIC/MODE (S5)
+- ⏳ Validação final e robustez (S6)
 
 ---
 
