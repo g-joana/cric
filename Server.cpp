@@ -110,8 +110,27 @@ void Server::run() {
 					else{
 						buffer[bytesReads] = '\0';
 						std::cout << "Data recived from fd " << _pollfds[i].fd << " : " << buffer << std::endl;
-						// Client *c = _clients[_pollfds[i].fd];
-						// c->appendToBuffer(buffer);
+						Client *c = _clients[_pollfds[i].fd];
+						c->appendToBuffer(buffer);
+
+						std::string clientBuffer = c->getBuffer();
+						
+						size_t pos;
+						
+						while((pos = clientBuffer.find("\n")) != std::string::npos){
+							std::string command = clientBuffer.substr(0, pos);
+							if (!command.empty() && command[command.size() - 1] == '\r')
+								command.erase(command.size() - 1);
+							if (!command.empty())
+							{
+								std::cout << "Executando comando: [" << command << "]" << std::endl; 
+								//todo: implementar comandos pass, nick, ..
+							}
+							clientBuffer.erase(0, pos + 1);
+							c->clearBuffer();
+							c->appendToBuffer(clientBuffer);
+						}
+
 					}
 				}
 			}

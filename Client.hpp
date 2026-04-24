@@ -4,6 +4,7 @@
 # include <string>
 # include <vector>
 # include <poll.h>
+# include <iostream>
 
 class Client{
     private: 
@@ -22,12 +23,13 @@ class Client{
         int getFd() const;
         
         std::string getNickname() const;
-        std::string setNickname(const std::string &nick) const; 
+        void setNickname(const std::string &nick); 
 
         std::string getUser()const;
-        std::string setUser(const std::string &user) const;
+        void setUser(const std::string &username);
 
-        bool getIsRegistered()
+        bool getIsRegistered() const;
+        void setIsRegistered(bool state);
 
         void appendToBuffer(const std::string &message); //montar mensagem parcelada no buffer
         std::string getBuffer() const; 
