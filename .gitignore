@@ -41,10 +41,10 @@ ircserv
 # debug information files
 *.dwo
 
-# llm tools
-.github
-/docs
+# Docs to ignore (legacy, not needed)
 rubric.md 
 gemini_answer.md
-bircd
 requisitos.md
+
+# bircd reference (do not version, use for reference only)
+bircd

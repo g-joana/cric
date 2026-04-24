@@ -22,7 +22,12 @@ private:
 
 	std::vector<struct pollfd>	_pollfds;
 	std::map<int, Client *> _clients;
+	
+	// Pending connections (to avoid modifying _pollfds during poll loop)
+	std::vector<int> _pendingConnections;
+	
 	void _acceptClient();
+	void _processPendingConnections();
 
 	// Private so we can't create a server without a port and password
 	Server();
