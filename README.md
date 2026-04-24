@@ -89,12 +89,19 @@ cric/
 
 ## 📚 Documentação
 
+### 📖 Decisões Técnicas por Sprint
+
 Ler em `docs/sprints_knowledge/` para entender decisões técnicas:
 
 - **[S0-BUG-ANALYSIS.md](docs/sprints_knowledge/S0-BUG-ANALYSIS.md)** - Identificação de bugs críticos (poll/erase)
 - **[S1-PARSER-DESIGN.md](docs/sprints_knowledge/S1-PARSER-DESIGN.md)** - Design do parser robusto para comandos fragmentados
 - **[S1-PARSER-REVISION.md](docs/sprints_knowledge/S1-PARSER-REVISION.md)** - Testes 8/8 unitários, edge cases tratados
+- **[S2-AUTHENTICATION.md](docs/sprints_knowledge/S2-AUTHENTICATION.md)** - Sistema de autenticação, state machine, RFC compliance
 - **[architectural-design.md](docs/architectural-design.md)** - Explicação do padrão Reactor (como o servidor funciona)
+
+### 🧪 Testes Manuais com irssi
+
+- **[MANUAL_TESTING_WITH_IRSSI.md](docs/MANUAL_TESTING_WITH_IRSSI.md)** - Guia prático com 8 testes interativos, checklist de validação e troubleshooting para validar S0/S1/S2 features
 
 ---
 
@@ -128,6 +135,8 @@ make distclean
 ## 🚀 Status dos Sprints
 
 Metodologia: **6 Sprints Independentes** com entrega iterativa
+
+**ℹ️ Teste Manuais**: Todos os S0/S1/S2 features podem ser testados com irssi usando [MANUAL_TESTING_WITH_IRSSI.md](docs/MANUAL_TESTING_WITH_IRSSI.md)
 
 | Sprint | Objetivo | Status | Documento |
 |--------|----------|--------|-----------|
