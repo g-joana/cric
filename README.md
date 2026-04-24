@@ -25,7 +25,7 @@ Comandos:
  
 ### Backlog de Tarefas Faltantes
 1. Gestão de Memória e Recursos (Cleanup)
-    - [ ] Remover do Mapa: No Server::run(), ao detectar desconexão (bytesReads <= 0), remover a entrada correspondente no std::map<int, Client*> _clients.
+    - [ ] Remover do Map: No Server::run(), ao detectar desconexão (bytesReads <= 0), remover a entrada correspondente no std::map<int, Client*> _clients.
     - [ ] Deletar Objeto: Chamar delete para o ponteiro do objeto Client para liberar a memória alocada no accept.
     - [ ] Ajustar Loop do Poll: Garantir que, ao remover um elemento do vector<pollfd>, o índice i seja decrementado corretamente para não pular o próximo FD na lista.
 
