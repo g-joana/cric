@@ -2,8 +2,6 @@
 
 **Servidor IRC (Internet Relay Chat)** implementado em **C++98** com arquitetura não-bloqueante usando `poll()`.
 
-Projeto desenvolvimento iterativo com **Sprints de Agentes Independentes** (S0-S6).
-
 ---
 
 ## 🎯 Objetivo
@@ -57,17 +55,7 @@ irssi
 
 ```
 cric/
-├── .github/docs/              ← Documentação para Agentes (NÃO versionada)
-│   ├── AGENTS_KNOWLEDGE_INDEX.md    (Bússola para agentes - COMECE AQUI)
-│   ├── copilot-instructions.md      (Instruções + requisitos críticos)
-│   ├── SPRINT_TRACKING.md           (Status em tempo real)
-│   ├── functional-requirements.md   (Specs completos do projeto)
-│   ├── bircd-reference.md           (Arquitetura C de referência)
-│   ├── development-strategy.md      (Roadmap 11 fases)
-│   ├── irssi-testing-guide.md       (Guia de testes com irssi)
-│   └── project_rubric.md            (Critérios de avaliação)
-│
-├── docs/                      ← Documentação para Humanos (VERSIONADA)
+├── docs/                      ← Documentação
 │   ├── architectural-design.md      (Padrão Reactor, design C++)
 │   └── sprints_knowledge/           (Conhecimento acumulado por sprint)
 │       ├── S0-BUG-ANALYSIS.md       (Análise do bug Ctrl+D)
@@ -85,8 +73,6 @@ cric/
 │   ├── S1-parser-validation.sh
 │   └── run-parser-unit-tests.sh
 │
-├── bircd/                     ← Referência arquitetural (C)
-│
 ├── *.cpp / *.hpp              ← Código-fonte (C++98)
 │   ├── main.cpp
 │   ├── Server.cpp / Server.hpp
@@ -95,6 +81,7 @@ cric/
 │
 ├── Makefile                   ← Build system
 ├── .gitignore
+├── kalu-roadmap.md            ← Roadmap inicial
 └── README.md (você está aqui)
 ```
 
@@ -102,21 +89,12 @@ cric/
 
 ## 📚 Documentação
 
-### Para Humanos (GitHub - VERSIONADA)
 Ler em `docs/sprints_knowledge/` para entender decisões técnicas:
 
 - **[S0-BUG-ANALYSIS.md](docs/sprints_knowledge/S0-BUG-ANALYSIS.md)** - Identificação de bugs críticos (poll/erase)
 - **[S1-PARSER-DESIGN.md](docs/sprints_knowledge/S1-PARSER-DESIGN.md)** - Design do parser robusto para comandos fragmentados
 - **[S1-PARSER-REVISION.md](docs/sprints_knowledge/S1-PARSER-REVISION.md)** - Testes 8/8 unitários, edge cases tratados
 - **[architectural-design.md](docs/architectural-design.md)** - Explicação do padrão Reactor (como o servidor funciona)
-
-### Para Agentes (NÃO VERSIONADA)
-Ler em `.github/docs/` para instruções de desenvolvimento:
-
-- **[AGENTS_KNOWLEDGE_INDEX.md](.github/docs/AGENTS_KNOWLEDGE_INDEX.md)** ← **Agentes começam aqui**
-- **[functional-requirements.md](.github/docs/functional-requirements.md)** - Requisitos completos
-- **[bircd-reference.md](.github/docs/bircd-reference.md)** - Arquitetura da referência (bircd/)
-- **[irssi-testing-guide.md](.github/docs/irssi-testing-guide.md)** - Como testar com cliente real
 
 ---
 
@@ -225,26 +203,9 @@ Veja [architectural-design.md](docs/architectural-design.md) para detalhes.
 
 ---
 
-## 🤝 Contribuir
-
-Este projeto segue metodologia de **Sprints com Agentes Independentes**.
-
-Se você é um **agente de IA**:
-1. Ler [AGENTS_KNOWLEDGE_INDEX.md](.github/docs/AGENTS_KNOWLEDGE_INDEX.md)
-2. Ler [copilot-instructions.md](.github/docs/copilot-instructions.md)
-3. Começar seu sprint
-
-Se você é um **desenvolvedor humano**:
-1. Ler [docs/sprints_knowledge/](docs/sprints_knowledge/) para contexto
-2. Validar requisitos em [functional-requirements.md](.github/docs/functional-requirements.md)
-3. Executar testes com `bash test/S{n}-acceptance.sh`
-
----
-
 ## 📖 Referência
 
 - **RFC 1459**: [Internet Relay Chat Protocol](https://tools.ietf.org/html/rfc1459)
-- **bircd**: Implementação C de referência em `bircd/`
 - **irssi**: Cliente IRC para testes
 - **netcat**: Ferramenta para testes básicos
 
