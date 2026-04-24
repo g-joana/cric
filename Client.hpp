@@ -20,8 +20,14 @@ class Client{
         ~Client();
 
         int getFd() const;
+        
         std::string getNickname() const;
         std::string setNickname(const std::string &nick) const; 
+
+        std::string getUser()const;
+        std::string setUser(const std::string &user) const;
+
+        bool getIsRegistered()
 
         void appendToBuffer(const std::string &message); //montar mensagem parcelada no buffer
         std::string getBuffer() const; 
