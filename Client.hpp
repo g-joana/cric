@@ -7,11 +7,11 @@
 
 class Client{
     private: 
-        int _fd;
+        int         _fd;
         std::string _nickname;
         std::string _user;
         std::string _buffer;
-        std::string isRegistered;
+        bool _isRegistered;
 
         Client(); // nao criar client sem fd;
 
