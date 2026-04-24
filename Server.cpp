@@ -1,6 +1,7 @@
 #include "Server.hpp"
 #include <iostream>
 #include <cstdlib>
+#include <cctype>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
@@ -293,6 +294,8 @@ void Server::_processCommand(Client *client, const std::string &command) {
 		_handleNICK(client, params);
 	} else if (commandName == "USER") {
 		_handleUSER(client, params);
+	} else if (commandName == "PING") {
+		_handlePING(client, params);
 	} else {
 		// Unknown command - for now, silently ignore (will implement more commands in S3+)
 		std::cout << "Client fd " << client->getFd() << " sent unknown command: " << commandName << std::endl;
@@ -368,3 +371,6 @@ void Server::run() {
 	}
 }
 
+void Server::_handlePING(Client *client, const std::string &args) {
+	client->sendMessage("PONG " + args);
+}

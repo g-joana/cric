@@ -1,4 +1,5 @@
 #include "Client.hpp"
+#include <sys/socket.h>
 
 Client::Client(int fd) : _fd(fd), _nickname(""), _user(""), _realname(""),
                           _parser(), _isRegistered(false), _isAuthenticated(false),
@@ -99,4 +100,9 @@ std::string Client::getBuffer() const {
 
 void Client::clearBuffer() {
     _parser.clearBuffer();
+}
+
+void Client::sendMessage(const std::string &msg) {
+    std::string full = msg + "\r\n";
+    ::send(_fd, full.c_str(), full.size(), 0);
 }
