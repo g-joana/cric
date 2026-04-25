@@ -550,6 +550,27 @@ void Server::_handleJOIN(Client *client, const std::string &args) {
 	}
 
 	Channel *channel = _findChannel(channelName);
+
+	// Check channel modes BEFORE adding member
+	if (channel) {
+		// Check invite-only (+i)
+		if (channel->isInviteOnly() && !channel->isInvited(client->getFd())) {
+			client->sendMessage(":server 473 " + client->getNickname() + " " + channelName + " :Cannot join channel (+i)");
+			return;
+		}
+		// Check channel key (+k)
+		if (channel->hasKey() && key != channel->getKey()) {
+			client->sendMessage(":server 475 " + client->getNickname() + " " + channelName + " :Cannot join channel (+k)");
+			return;
+		}
+		// Check user limit (+l)
+		if (channel->isAtUserLimit()) {
+			client->sendMessage(":server 471 " + client->getNickname() + " " + channelName + " :Cannot join channel (+l)");
+			return;
+		}
+	}
+
+	// Create new channel if doesn't exist
 	if (!channel) {
 		channel = new Channel(channelName);
 		_channels[channelName] = channel;
