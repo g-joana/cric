@@ -8,6 +8,9 @@
 #include <fcntl.h>
 #include <cstring>
 
+// Global pointer for signal handler
+Server *g_server = NULL;
+
 Server::Server(int port, const std::string &password)
 	: _port(port), _password(password), _fd(-1) {
 	_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -43,6 +46,10 @@ Server::Server(int port, const std::string &password)
 	pfd.events = POLLIN;
 	pfd.revents = 0;
 	_pollfds.push_back(pfd);
+
+	// Setup SIGINT handler
+	g_server = this;
+	signal(SIGINT, sigintHandler);
 
 	std::cout << "Server listening on port " << _port << std::endl;
 }
@@ -1057,7 +1064,44 @@ void Server::_handleMODE(Client *client, const std::string &args) {
 			ch->broadcast(modeMsg);
 		}
 
-		std::cout << "Client " << client->getNickname() << " changed modes of " 
+std::cout << "Client " << client->getNickname() << " changed modes of "
 			<< target << std::endl;
+	}
+}
+
+// ============ S6 - ROBUSTNESS ============
+
+void Server::sigintHandler(int sig) {
+	(void)sig;
+	if (g_server) {
+		g_server->_cleanupAndExit();
+	}
+	exit(0);
+}
+
+void Server::_cleanupAndExit() {
+	std::cout << "\nServer shutting down cleanly (SIGINT)" << std::endl;
+
+	// Close all poll fds
+	for (size_t i = 0; i < _pollfds.size(); i++) {
+		close(_pollfds[i].fd);
+	}
+	_pollfds.clear();
+
+	// Delete all clients
+	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
+		delete it->second;
+	}
+	_clients.clear();
+
+	// Delete all channels
+	for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
+		delete it->second;
+	}
+	_channels.clear();
+
+	if (_fd >= 0) {
+		close(_fd);
+		_fd = -1;
 	}
 }
