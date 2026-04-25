@@ -5,10 +5,16 @@
 # include <vector>
 # include <poll.h>
 # include <map>
+# include <signal.h>
 # include "Client.hpp"
 # include "Channel.hpp"
 
 class Client;
+
+// Global pointer for signal handler
+class Server;
+extern Server *g_server;
+
 class Server {
 public:
 	Server(int port, const std::string &password);
@@ -40,12 +46,20 @@ private:
 	void _handleJOIN(Client *client, const std::string &args);
 	void _handlePART(Client *client, const std::string &args);
 	void _handleQUIT(Client *client, const std::string &args);
+	void _handleKICK(Client *client, const std::string &args);
+	void _handleINVITE(Client *client, const std::string &args);
+	void _handleTOPIC(Client *client, const std::string &args);
+	void _handleMODE(Client *client, const std::string &args);
 	void _sendWelcome(Client *client);
 	bool _isNickDuplicate(const std::string &nick) const;
 	Client *_findClientByNick(const std::string &nick) const;
 	Channel *_findChannel(const std::string &name) const;
 	void _removeClient(int fd);
 	void _processCommand(Client *client, const std::string &command);
+	void _cleanupAndExit();
+
+	// Signal handler
+	static void sigintHandler(int sig);
 
 	// Private so we can't create a server without a port and password
 	Server();

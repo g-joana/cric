@@ -8,6 +8,9 @@
 #include <fcntl.h>
 #include <cstring>
 
+// Global pointer for signal handler
+Server *g_server = NULL;
+
 Server::Server(int port, const std::string &password)
 	: _port(port), _password(password), _fd(-1) {
 	_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -43,6 +46,10 @@ Server::Server(int port, const std::string &password)
 	pfd.events = POLLIN;
 	pfd.revents = 0;
 	_pollfds.push_back(pfd);
+
+	// Setup SIGINT handler
+	g_server = this;
+	signal(SIGINT, sigintHandler);
 
 	std::cout << "Server listening on port " << _port << std::endl;
 }
@@ -326,6 +333,14 @@ void Server::_processCommand(Client *client, const std::string &command) {
 		_handlePART(client, params);
 	} else if (commandName == "QUIT") {
 		_handleQUIT(client, params);
+	} else if (commandName == "KICK") {
+		_handleKICK(client, params);
+	} else if (commandName == "INVITE") {
+		_handleINVITE(client, params);
+	} else if (commandName == "TOPIC") {
+		_handleTOPIC(client, params);
+	} else if (commandName == "MODE") {
+		_handleMODE(client, params);
 	} else {
 		// Unknown command - for now, silently ignore (will implement more commands in S3+)
 		std::cout << "Client fd " << client->getFd() << " sent unknown command: " << commandName << std::endl;
@@ -335,7 +350,7 @@ void Server::_processCommand(Client *client, const std::string &command) {
 void Server::run() {
 	while (true) {
 		// Poll the sockets for events
-		std::cout << "Waiting on poll.. Active clients: " << _pollfds.size() << std::endl;
+		std::cout << "Waiting on poll.. Active clients: " << _clients.size() << std::endl;
 		int ready = poll(&_pollfds[0], _pollfds.size(), -1);
 		if (ready == -1)
 			break;
@@ -542,6 +557,27 @@ void Server::_handleJOIN(Client *client, const std::string &args) {
 	}
 
 	Channel *channel = _findChannel(channelName);
+
+	// Check channel modes BEFORE adding member
+	if (channel) {
+		// Check invite-only (+i)
+		if (channel->isInviteOnly() && !channel->isInvited(client->getFd())) {
+			client->sendMessage(":server 473 " + client->getNickname() + " " + channelName + " :Cannot join channel (+i)");
+			return;
+		}
+		// Check channel key (+k)
+		if (channel->hasKey() && key != channel->getKey()) {
+			client->sendMessage(":server 475 " + client->getNickname() + " " + channelName + " :Cannot join channel (+k)");
+			return;
+		}
+		// Check user limit (+l)
+		if (channel->isAtUserLimit()) {
+			client->sendMessage(":server 471 " + client->getNickname() + " " + channelName + " :Cannot join channel (+l)");
+			return;
+		}
+	}
+
+	// Create new channel if doesn't exist
 	if (!channel) {
 		channel = new Channel(channelName);
 		_channels[channelName] = channel;
@@ -640,4 +676,432 @@ void Server::_handleQUIT(Client *client, const std::string &args) {
 	}
 
 	_removeClient(client->getFd());
+}
+
+// ============ S5 - OPERATORS & MODERATION ============
+
+void Server::_handleKICK(Client *client, const std::string &args) {
+	if (!client->getIsRegistered()) {
+		client->sendMessage(":server 451 * :You have not registered");
+		return;
+	}
+
+	std::string::size_type firstSpace = args.find(' ');
+	if (firstSpace == std::string::npos) {
+		client->sendMessage(":server 461 " + client->getNickname() + " KICK :Not enough parameters");
+		return;
+	}
+
+	std::string channel = args.substr(0, firstSpace);
+	std::string::size_type secondSpace = args.find(' ', firstSpace + 1);
+	std::string target;
+	
+	if (secondSpace == std::string::npos) {
+		target = args.substr(firstSpace + 1);
+	} else {
+		target = args.substr(firstSpace + 1, secondSpace - firstSpace - 1);
+	}
+
+	Channel *ch = _findChannel(channel);
+	if (!ch) {
+		client->sendMessage(":server 403 " + client->getNickname() + " " + channel + " :No such channel");
+		return;
+	}
+
+	if (!ch->isMember(client->getFd())) {
+		client->sendMessage(":server 442 " + client->getNickname() + " " + channel + " :You're not on that channel");
+		return;
+	}
+
+	if (!ch->isOperator(client->getFd())) {
+		client->sendMessage(":server 482 " + client->getNickname() + " " + channel + " :You're not channel operator");
+		return;
+	}
+
+	Client *targetClient = _findClientByNick(target);
+	if (!targetClient) {
+		client->sendMessage(":server 401 " + client->getNickname() + " " + target + " :No such nick/channel");
+		return;
+	}
+
+	if (!ch->isMember(targetClient->getFd())) {
+		client->sendMessage(":server 441 " + client->getNickname() + " " + target + " " + channel + " :They aren't on that channel");
+		return;
+	}
+
+	std::string kickMsg = ":" + client->getNickname() + "!" + client->getUser() 
+		+ "@server KICK " + channel + " " + target;
+	ch->broadcast(kickMsg);
+
+	ch->removeMember(targetClient->getFd());
+	targetClient->removeChannel(channel);
+
+	if (ch->getMemberCount() == 0) {
+		delete ch;
+		_channels.erase(channel);
+	}
+
+	std::cout << "Client " << client->getNickname() << " kicked " << target 
+		<< " from " << channel << std::endl;
+}
+
+void Server::_handleINVITE(Client *client, const std::string &args) {
+	if (!client->getIsRegistered()) {
+		client->sendMessage(":server 451 * :You have not registered");
+		return;
+	}
+
+	std::string::size_type firstSpace = args.find(' ');
+	if (firstSpace == std::string::npos) {
+		client->sendMessage(":server 461 " + client->getNickname() + " INVITE :Not enough parameters");
+		return;
+	}
+
+	std::string target = args.substr(0, firstSpace);
+	std::string::size_type secondSpace = args.find(' ', firstSpace + 1);
+	std::string channel;
+	
+	if (secondSpace == std::string::npos) {
+		channel = args.substr(firstSpace + 1);
+	} else {
+		channel = args.substr(firstSpace + 1, secondSpace - firstSpace - 1);
+	}
+
+	Channel *ch = _findChannel(channel);
+	if (!ch) {
+		client->sendMessage(":server 403 " + client->getNickname() + " " + channel + " :No such channel");
+		return;
+	}
+
+	if (!ch->isMember(client->getFd())) {
+		client->sendMessage(":server 442 " + client->getNickname() + " " + channel + " :You're not on that channel");
+		return;
+	}
+
+	if (ch->isInviteOnly() && !ch->isOperator(client->getFd())) {
+		client->sendMessage(":server 482 " + client->getNickname() + " " + channel + " :You're not channel operator");
+		return;
+	}
+
+	Client *targetClient = _findClientByNick(target);
+	if (!targetClient) {
+		client->sendMessage(":server 401 " + client->getNickname() + " " + target + " :No such nick/channel");
+		return;
+	}
+
+	if (ch->isMember(targetClient->getFd())) {
+		client->sendMessage(":server 443 " + client->getNickname() + " " + target + " " + channel + " :is already on channel");
+		return;
+	}
+
+	ch->addInvite(targetClient->getFd());
+	targetClient->sendMessage(":" + client->getNickname() + "!" + client->getUser() 
+		+ "@server INVITE " + target + " :" + channel);
+	
+	client->sendMessage(":server 341 " + client->getNickname() + " " + target + " " + channel);
+
+	std::cout << "Client " << client->getNickname() << " invited " << target 
+		<< " to " << channel << std::endl;
+}
+
+void Server::_handleTOPIC(Client *client, const std::string &args) {
+	if (!client->getIsRegistered()) {
+		client->sendMessage(":server 451 * :You have not registered");
+		return;
+	}
+
+	std::string::size_type spacePos = args.find(' ');
+	std::string channel;
+	std::string newTopic;
+
+	if (spacePos == std::string::npos) {
+		channel = args;
+	} else {
+		channel = args.substr(0, spacePos);
+		std::string::size_type colonPos = args.find(':', spacePos);
+		if (colonPos != std::string::npos) {
+			newTopic = args.substr(colonPos + 1);
+		}
+	}
+
+	Channel *ch = _findChannel(channel);
+	if (!ch) {
+		client->sendMessage(":server 403 " + client->getNickname() + " " + channel + " :No such channel");
+		return;
+	}
+
+	if (!ch->isMember(client->getFd())) {
+		client->sendMessage(":server 442 " + client->getNickname() + " " + channel + " :You're not on that channel");
+		return;
+	}
+
+	// If no new topic, just return current topic
+	if (spacePos == std::string::npos) {
+		std::string topic = ch->getTopic();
+		if (topic.empty()) {
+			client->sendMessage(":server 331 " + client->getNickname() + " " + channel + " :No topic is set");
+		} else {
+			client->sendMessage(":server 332 " + client->getNickname() + " " + channel + " :" + topic);
+		}
+		return;
+	}
+
+	// Setting topic - check operator privilege if mode +t is set
+	if (ch->isTopicRestricted() && !ch->isOperator(client->getFd())) {
+		client->sendMessage(":server 482 " + client->getNickname() + " " + channel + " :You're not channel operator");
+		return;
+	}
+
+	ch->setTopic(newTopic);
+	
+	std::string topicMsg = ":" + client->getNickname() + "!" + client->getUser() 
+		+ "@server TOPIC " + channel + " :" + newTopic;
+	ch->broadcast(topicMsg);
+
+	std::cout << "Client " << client->getNickname() << " changed topic of " 
+		<< channel << " to: " << newTopic << std::endl;
+}
+
+void Server::_handleMODE(Client *client, const std::string &args) {
+	if (!client->getIsRegistered()) {
+		client->sendMessage(":server 451 * :You have not registered");
+		return;
+	}
+
+	std::string::size_type firstSpace = args.find(' ');
+	std::string target = args.substr(0, firstSpace);
+
+	// If target is a channel
+	if (target.length() > 0 && target[0] == '#') {
+		Channel *ch = _findChannel(target);
+		if (!ch) {
+			client->sendMessage(":server 403 " + client->getNickname() + " " + target + " :No such channel");
+			return;
+		}
+
+		if (!ch->isMember(client->getFd())) {
+			client->sendMessage(":server 442 " + client->getNickname() + " " + target + " :You're not on that channel");
+			return;
+		}
+
+		if (!ch->isOperator(client->getFd())) {
+			client->sendMessage(":server 482 " + client->getNickname() + " " + target + " :You're not channel operator");
+			return;
+		}
+
+		// Parse mode changes
+		if (firstSpace == std::string::npos) {
+			// Just show current modes
+			std::string modes = "+";
+			if (ch->isInviteOnly()) modes += "i";
+			if (ch->isTopicRestricted()) modes += "t";
+			if (ch->hasKey()) modes += "k";
+			if (ch->getUserLimit() > 0) modes += "l";
+			client->sendMessage(":server 324 " + client->getNickname() + " " + target + " " + modes);
+			return;
+		}
+
+		std::string modeString = args.substr(firstSpace + 1);
+		std::string::size_type modeEnd = modeString.find(' ');
+		std::string modes;
+		std::string modeParams;
+
+		if (modeEnd == std::string::npos) {
+			modes = modeString;
+		} else {
+			modes = modeString.substr(0, modeEnd);
+			modeParams = modeString.substr(modeEnd + 1);
+		}
+
+		std::string responseMode = "";
+		std::string responseParams = "";
+		bool adding = true;
+
+		for (size_t i = 0; i < modes.length(); i++) {
+			char mode = modes[i];
+
+			if (mode == '+') {
+				adding = true;
+				continue;
+			}
+			if (mode == '-') {
+				adding = false;
+				continue;
+			}
+
+			// Mode +i: Invite-only
+			if (mode == 'i') {
+				if (adding != ch->isInviteOnly()) {
+					responseMode += mode;
+					ch->setInviteOnly(adding);
+				}
+			}
+			// Mode +t: Topic restricted
+			else if (mode == 't') {
+				if (adding != ch->isTopicRestricted()) {
+					responseMode += mode;
+					ch->setTopicRestricted(adding);
+				}
+			}
+			// Mode +k: Channel key (password)
+			else if (mode == 'k') {
+				if (adding) {
+					std::string::size_type keyStart = modeParams.find_first_not_of(" \t");
+					if (keyStart == std::string::npos) {
+						client->sendMessage(":server 461 " + client->getNickname() + " MODE :Not enough parameters");
+						return;
+					}
+					std::string::size_type keyEnd = modeParams.find(' ', keyStart);
+					std::string key;
+					if (keyEnd == std::string::npos) {
+						key = modeParams.substr(keyStart);
+						modeParams = "";
+					} else {
+						key = modeParams.substr(keyStart, keyEnd - keyStart);
+						modeParams = modeParams.substr(keyEnd);
+					}
+					ch->setKey(key);
+					responseMode += mode;
+					responseParams += " " + key;
+				} else {
+					ch->setKey("");
+					responseMode += mode;
+				}
+			}
+			// Mode +o: Give/take operator privilege
+			else if (mode == 'o') {
+				if (modeParams.empty()) {
+					client->sendMessage(":server 461 " + client->getNickname() + " MODE :Not enough parameters");
+					return;
+				}
+				std::string::size_type nickStart = modeParams.find_first_not_of(" \t");
+				if (nickStart == std::string::npos) {
+					client->sendMessage(":server 461 " + client->getNickname() + " MODE :Not enough parameters");
+					return;
+				}
+				std::string::size_type nickEnd = modeParams.find(' ', nickStart);
+				std::string nick;
+				if (nickEnd == std::string::npos) {
+					nick = modeParams.substr(nickStart);
+					modeParams = "";
+				} else {
+					nick = modeParams.substr(nickStart, nickEnd - nickStart);
+					modeParams = modeParams.substr(nickEnd);
+				}
+				
+				Client *opClient = _findClientByNick(nick);
+				if (!opClient) {
+					client->sendMessage(":server 401 " + client->getNickname() + " " + nick + " :No such nick/channel");
+					return;
+				}
+
+				if (!ch->isMember(opClient->getFd())) {
+					client->sendMessage(":server 441 " + client->getNickname() + " " + nick + " " + target + " :They aren't on that channel");
+					return;
+				}
+
+				if (adding) {
+					if (!ch->isOperator(opClient->getFd())) {
+						ch->addOperator(opClient->getFd());
+						responseMode += mode;
+						responseParams += " " + nick;
+					}
+				} else {
+					if (ch->isOperator(opClient->getFd())) {
+						ch->removeOperator(opClient->getFd());
+						responseMode += mode;
+						responseParams += " " + nick;
+					}
+				}
+			}
+			// Mode +l: User limit
+			else if (mode == 'l') {
+				if (adding) {
+					if (modeParams.empty()) {
+						client->sendMessage(":server 461 " + client->getNickname() + " MODE :Not enough parameters");
+						return;
+					}
+					std::string::size_type numStart = modeParams.find_first_not_of(" \t");
+					if (numStart == std::string::npos) {
+						client->sendMessage(":server 461 " + client->getNickname() + " MODE :Not enough parameters");
+						return;
+					}
+					std::string::size_type numEnd = modeParams.find(' ', numStart);
+					std::string numStr;
+					if (numEnd == std::string::npos) {
+						numStr = modeParams.substr(numStart);
+						modeParams = "";
+					} else {
+						numStr = modeParams.substr(numStart, numEnd - numStart);
+						modeParams = modeParams.substr(numEnd);
+					}
+					
+					int limit = 0;
+					for (size_t j = 0; j < numStr.length(); j++) {
+						if (numStr[j] < '0' || numStr[j] > '9') {
+							client->sendMessage(":server 501 " + client->getNickname() + " :Invalid MODE parameter");
+							return;
+						}
+						limit = limit * 10 + (numStr[j] - '0');
+					}
+					
+					if (limit > 0) {
+						ch->setUserLimit(limit);
+						responseMode += mode;
+						responseParams += " " + numStr;
+					}
+				} else {
+					ch->setUserLimit(0);
+					responseMode += mode;
+				}
+			}
+		}
+
+		// Broadcast mode change
+		if (!responseMode.empty()) {
+			std::string modeMsg = ":" + client->getNickname() + "!" + client->getUser() 
+				+ "@server MODE " + target + " +" + responseMode + responseParams;
+			ch->broadcast(modeMsg);
+		}
+
+std::cout << "Client " << client->getNickname() << " changed modes of "
+			<< target << std::endl;
+	}
+}
+
+// ============ S6 - ROBUSTNESS ============
+
+void Server::sigintHandler(int sig) {
+	(void)sig;
+	if (g_server) {
+		g_server->_cleanupAndExit();
+	}
+	exit(0);
+}
+
+void Server::_cleanupAndExit() {
+	std::cout << "\nServer shutting down cleanly (SIGINT)" << std::endl;
+
+	// Close all poll fds
+	for (size_t i = 0; i < _pollfds.size(); i++) {
+		close(_pollfds[i].fd);
+	}
+	_pollfds.clear();
+
+	// Delete all clients
+	for (std::map<int, Client*>::iterator it = _clients.begin(); it != _clients.end(); ++it) {
+		delete it->second;
+	}
+	_clients.clear();
+
+	// Delete all channels
+	for (std::map<std::string, Channel*>::iterator it = _channels.begin(); it != _channels.end(); ++it) {
+		delete it->second;
+	}
+	_channels.clear();
+
+	if (_fd >= 0) {
+		close(_fd);
+		_fd = -1;
+	}
 }

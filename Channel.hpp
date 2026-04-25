@@ -14,6 +14,13 @@ private:
     std::string _topic;
     std::map<int, Client*> _members;
     std::set<int> _operators;
+    std::set<int> _invited;
+    
+    // Channel modes
+    bool _inviteOnly;          // +i
+    bool _topicRestricted;     // +t (only ops can set topic)
+    std::string _key;          // +k (password)
+    int _userLimit;            // +l (max users, 0 = unlimited)
 
     Channel();
     Channel(const Channel &other);
@@ -34,8 +41,29 @@ public:
     void addOperator(int fd);
     void removeOperator(int fd);
 
+    // Invitation system
+    void addInvite(int fd);
+    void removeInvite(int fd);
+    bool isInvited(int fd) const;
+
+    // Mode management
+    bool isInviteOnly() const;
+    void setInviteOnly(bool value);
+    
+    bool isTopicRestricted() const;
+    void setTopicRestricted(bool value);
+    
+    std::string getKey() const;
+    void setKey(const std::string &key);
+    bool hasKey() const;
+    
+    int getUserLimit() const;
+    void setUserLimit(int limit);
+    bool isAtUserLimit() const;
+
     void broadcast(const std::string &message, int excludeFd = -1);
     size_t getMemberCount() const;
+    const std::map<int, Client*> &getMembers() const;
 };
 
 #endif
