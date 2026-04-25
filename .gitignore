@@ -51,3 +51,5 @@ bircd
 
 # .github folder (for agents only, do not version)
 .github
+.continueignore
+.opencode

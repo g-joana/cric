@@ -3,6 +3,7 @@
 
 # include <string>
 # include <vector>
+# include <set>
 # include <poll.h>
 # include <iostream>
 # include "CommandParser.hpp"
@@ -26,6 +27,7 @@ class Client{
         bool _hasNick;
         bool _hasUser;
         ClientState _state;
+        std::set<std::string> _channels;
 
         Client(); // nao criar client sem fd;
 
@@ -69,7 +71,11 @@ class Client{
         void clearBuffer(); 
 
         void sendMessage(const std::string &msg);
-};
 
+        void addChannel(const std::string &channel);
+        void removeChannel(const std::string &channel);
+        bool isInChannel(const std::string &channel) const;
+        const std::set<std::string> &getChannels() const;
+};
 
 #endif 
