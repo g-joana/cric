@@ -1,6 +1,6 @@
 NAME	= ircserv
 
-SRC		= main.cpp Server.cpp Client.cpp CommandParser.cpp
+SRC		= main.cpp Server.cpp Client.cpp CommandParser.cpp Channel.cpp
 OBJ		= $(SRC:.cpp=.o)
 
 CXX		= c++

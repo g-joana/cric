@@ -106,3 +106,19 @@ void Client::sendMessage(const std::string &msg) {
     std::string full = msg + "\r\n";
     ::send(_fd, full.c_str(), full.size(), 0);
 }
+
+void Client::addChannel(const std::string &channel) {
+    _channels.insert(channel);
+}
+
+void Client::removeChannel(const std::string &channel) {
+    _channels.erase(channel);
+}
+
+bool Client::isInChannel(const std::string &channel) const {
+    return _channels.find(channel) != _channels.end();
+}
+
+const std::set<std::string> &Client::getChannels() const {
+    return _channels;
+}
