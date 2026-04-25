@@ -350,7 +350,7 @@ void Server::_processCommand(Client *client, const std::string &command) {
 void Server::run() {
 	while (true) {
 		// Poll the sockets for events
-		std::cout << "Waiting on poll.. Active clients: " << _pollfds.size() << std::endl;
+		std::cout << "Waiting on poll.. Active clients: " << _clients.size() << std::endl;
 		int ready = poll(&_pollfds[0], _pollfds.size(), -1);
 		if (ready == -1)
 			break;
