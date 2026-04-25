@@ -40,6 +40,10 @@ private:
 	void _handleJOIN(Client *client, const std::string &args);
 	void _handlePART(Client *client, const std::string &args);
 	void _handleQUIT(Client *client, const std::string &args);
+	void _handleKICK(Client *client, const std::string &args);
+	void _handleINVITE(Client *client, const std::string &args);
+	void _handleTOPIC(Client *client, const std::string &args);
+	void _handleMODE(Client *client, const std::string &args);
 	void _sendWelcome(Client *client);
 	bool _isNickDuplicate(const std::string &nick) const;
 	Client *_findClientByNick(const std::string &nick) const;
